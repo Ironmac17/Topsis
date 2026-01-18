@@ -83,7 +83,7 @@ def send_email(receiver, file_path):
 
     print("STEP 4: Attachment added", flush=True)
 
-    server = smtplib.SMTP("smtp.gmail.com", 587, timeout=10)
+    server = smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10)
     try:
         print("STEP 5: Connecting to Gmail SMTP", flush=True)
         server.ehlo()
