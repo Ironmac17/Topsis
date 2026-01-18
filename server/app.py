@@ -2,10 +2,16 @@ from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import pandas as pd
 import numpy as np
-import os, re, smtplib
+import os
+import re
+import smtplib
+import socket
 from email.message import EmailMessage
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
+
+# ---------------- GLOBAL NETWORK SAFETY ----------------
+socket.setdefaulttimeout(10)
 
 # ---------------- ENV ----------------
 load_dotenv()
@@ -54,24 +60,18 @@ def topsis(df, weights, impacts):
 
     return df
 
-# ---------------- EMAIL (DEBUG VERSION) ----------------
+# ---------------- EMAIL ----------------
 def send_email(receiver, file_path):
     print("STEP 1: send_email() called", flush=True)
 
     if not EMAIL_ADDRESS or not EMAIL_APP_PASSWORD:
-        print("ERROR: Email credentials missing", flush=True)
         raise Exception("Email credentials missing")
-
-    print("STEP 2: Credentials loaded", flush=True)
-    print("EMAIL_ADDRESS:", EMAIL_ADDRESS, flush=True)
 
     msg = EmailMessage()
     msg["Subject"] = "TOPSIS Result"
     msg["From"] = EMAIL_ADDRESS
     msg["To"] = receiver
     msg.set_content("Attached is your TOPSIS result file.")
-
-    print("STEP 3: EmailMessage created", flush=True)
 
     with open(file_path, "rb") as f:
         msg.add_attachment(
@@ -81,31 +81,18 @@ def send_email(receiver, file_path):
             filename="output.csv"
         )
 
-    print("STEP 4: Attachment added", flush=True)
+    print("STEP 2: Message prepared, connecting SMTP", flush=True)
 
-    server = smtplib.SMTP("smtp.gmail.com", 587, timeout=10)
+    server = smtplib.SMTP("smtp.gmail.com", 587)
     try:
-        print("STEP 5: Connecting to Gmail SMTP", flush=True)
         server.ehlo()
-
-        print("STEP 6: Starting TLS", flush=True)
         server.starttls()
         server.ehlo()
-
-        print("STEP 7: Attempting login", flush=True)
         server.login(EMAIL_ADDRESS, EMAIL_APP_PASSWORD)
-
-        print("STEP 8: Sending email", flush=True)
         server.send_message(msg)
-
-        print("STEP 9: Email sent successfully", flush=True)
-
-    except Exception as e:
-        print("EMAIL ERROR:", type(e).__name__, "-", e, flush=True)
-        raise
+        print("STEP 3: Email sent successfully", flush=True)
     finally:
         server.quit()
-        print("STEP 10: SMTP connection closed", flush=True)
 
 # ---------------- API ----------------
 @app.route("/api/topsis", methods=["POST"])
@@ -152,7 +139,8 @@ def run_topsis():
         try:
             send_email(email, output_path)
             email_sent = True
-        except Exception:
+        except Exception as e:
+            print("EMAIL ERROR:", e, flush=True)
             email_error = "Email sending failed"
 
     return jsonify({
