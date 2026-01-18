@@ -7,11 +7,12 @@ from email.message import EmailMessage
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 
-
+# ---------------- ENV ----------------
 load_dotenv()
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_APP_PASSWORD = os.getenv("EMAIL_APP_PASSWORD")
 
+# ---------------- APP ----------------
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
@@ -22,7 +23,7 @@ os.makedirs(OUTPUTS, exist_ok=True)
 
 EMAIL_REGEX = r"^[\w\.-]+@[\w\.-]+\.\w+$"
 
-# ---------- TOPSIS LOGIC ----------
+# ---------------- TOPSIS ----------------
 def topsis(df, weights, impacts):
     data = df.iloc[:, 1:].values.astype(float)
     weights = np.array(weights)
@@ -53,16 +54,16 @@ def topsis(df, weights, impacts):
 
     return df
 
-# ---------- EMAIL ----------
+# ---------------- EMAIL (DEBUG VERSION) ----------------
 def send_email(receiver, file_path):
-    print("STEP 1: send_email() called")
+    print("STEP 1: send_email() called", flush=True)
 
     if not EMAIL_ADDRESS or not EMAIL_APP_PASSWORD:
-        print("ERROR: Email credentials missing")
+        print("ERROR: Email credentials missing", flush=True)
         raise Exception("Email credentials missing")
 
-    print("STEP 2: Credentials loaded")
-    print("EMAIL_ADDRESS:", EMAIL_ADDRESS)
+    print("STEP 2: Credentials loaded", flush=True)
+    print("EMAIL_ADDRESS:", EMAIL_ADDRESS, flush=True)
 
     msg = EmailMessage()
     msg["Subject"] = "TOPSIS Result"
@@ -70,58 +71,7 @@ def send_email(receiver, file_path):
     msg["To"] = receiver
     msg.set_content("Attached is your TOPSIS result file.")
 
-    print("STEP 3: EmailMessage created")
-
-    try:
-        with open(file_path, "rb") as f:
-            msg.add_attachment(
-                f.read(),
-                maintype="application",
-                subtype="octet-stream",
-                filename="output.csv"
-            )
-        print("STEP 4: Attachment added")
-    except Exception as e:
-        print("ERROR: Failed to attach file:", e)
-        raise
-
-    try:
-        print("STEP 5: Connecting to smtp.gmail.com:587")
-        server = smtplib.SMTP("smtp.gmail.com", 587, timeout=10)
-
-        print("STEP 6: Connected, sending EHLO")
-        server.ehlo()
-
-        print("STEP 7: Starting TLS")
-        server.starttls()
-
-        print("STEP 8: TLS started, sending EHLO again")
-        server.ehlo()
-
-        print("STEP 9: Attempting login")
-        server.login(EMAIL_ADDRESS, EMAIL_APP_PASSWORD)
-
-        print("STEP 10: Login successful, sending message")
-        server.send_message(msg)
-
-        print("STEP 11: Email sent successfully")
-
-    except Exception as e:
-        print("EMAIL ERROR OCCURRED:", type(e).__name__, "-", e)
-        raise
-
-    finally:
-        try:
-            server.quit()
-            print("STEP 12: SMTP connection closed")
-        except Exception:
-            print("STEP 12: SMTP connection already closed")
-
-    msg = EmailMessage()
-    msg["Subject"] = "TOPSIS Result"
-    msg["From"] = EMAIL_ADDRESS
-    msg["To"] = receiver
-    msg.set_content("Attached is your TOPSIS result file.")
+    print("STEP 3: EmailMessage created", flush=True)
 
     with open(file_path, "rb") as f:
         msg.add_attachment(
@@ -131,21 +81,43 @@ def send_email(receiver, file_path):
             filename="output.csv"
         )
 
-    with smtplib.SMTP("smtp.gmail.com", 587) as server:
+    print("STEP 4: Attachment added", flush=True)
+
+    server = smtplib.SMTP("smtp.gmail.com", 587, timeout=10)
+    try:
+        print("STEP 5: Connecting to Gmail SMTP", flush=True)
+        server.ehlo()
+
+        print("STEP 6: Starting TLS", flush=True)
         server.starttls()
+        server.ehlo()
+
+        print("STEP 7: Attempting login", flush=True)
         server.login(EMAIL_ADDRESS, EMAIL_APP_PASSWORD)
+
+        print("STEP 8: Sending email", flush=True)
         server.send_message(msg)
 
-# ---------- API ----------
+        print("STEP 9: Email sent successfully", flush=True)
+
+    except Exception as e:
+        print("EMAIL ERROR:", type(e).__name__, "-", e, flush=True)
+        raise
+    finally:
+        server.quit()
+        print("STEP 10: SMTP connection closed", flush=True)
+
+# ---------------- API ----------------
 @app.route("/api/topsis", methods=["POST"])
 def run_topsis():
     file = request.files.get("file")
     weights = request.form.get("weights")
     impacts = request.form.get("impacts")
     email = request.form.get("email")
-    send_mail = request.form.get("send_mail") == "on"
-    print("DEBUG: send_mail value =", send_mail)
-    
+
+    send_mail = str(request.form.get("send_mail")).lower() in ["on", "true", "1"]
+    print("DEBUG send_mail:", send_mail, flush=True)
+
     if not file:
         return jsonify({"error": "CSV file required"}), 400
 
@@ -169,7 +141,8 @@ def run_topsis():
 
     result_df = topsis(df, weights, impacts)
 
-    output_path = os.path.join(OUTPUTS, f"output_{os.getpid()}.csv")
+    output_filename = f"output_{os.getpid()}.csv"
+    output_path = os.path.join(OUTPUTS, output_filename)
     result_df.to_csv(output_path, index=False)
 
     email_sent = False
@@ -179,20 +152,20 @@ def run_topsis():
         try:
             send_email(email, output_path)
             email_sent = True
-        except Exception as e:
-            print("EMAIL ERROR:", e)
+        except Exception:
             email_error = "Email sending failed"
 
     return jsonify({
         "table": result_df.to_dict(orient="records"),
-        "download": "/api/download",
+        "download": f"/api/download/{output_filename}",
         "emailSent": email_sent,
         "emailError": email_error
     })
 
-@app.route("/api/download")
-def download():
-    return send_file("outputs/output.csv", as_attachment=True)
+@app.route("/api/download/<filename>")
+def download(filename):
+    return send_file(os.path.join(OUTPUTS, filename), as_attachment=True)
 
+# ---------------- RUN ----------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
