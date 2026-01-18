@@ -116,6 +116,7 @@ def run_topsis():
             send_email(email, output_path)
             email_sent = True
         except Exception as e:
+            print("EMAIL ERROR:", e)
             email_error = "Email sending failed"
 
     return jsonify({
