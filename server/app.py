@@ -144,7 +144,8 @@ def run_topsis():
     impacts = request.form.get("impacts")
     email = request.form.get("email")
     send_mail = request.form.get("send_mail") == "on"
-
+    print("DEBUG: send_mail value =", send_mail)
+    
     if not file:
         return jsonify({"error": "CSV file required"}), 400
 
