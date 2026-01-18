@@ -69,7 +69,8 @@ def send_email(receiver, file_path):
             filename="output.csv"
         )
 
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+    with smtplib.SMTP("smtp.gmail.com", 587) as server:
+        server.starttls()
         server.login(EMAIL_ADDRESS, EMAIL_APP_PASSWORD)
         server.send_message(msg)
 
