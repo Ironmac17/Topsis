@@ -4,19 +4,14 @@ import pandas as pd
 import numpy as np
 import os
 import re
-import smtplib
-import socket
-from email.message import EmailMessage
+import requests
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 
-# ---------------- GLOBAL NETWORK SAFETY ----------------
-socket.setdefaulttimeout(10)
-
 # ---------------- ENV ----------------
 load_dotenv()
-EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
-EMAIL_APP_PASSWORD = os.getenv("EMAIL_APP_PASSWORD")
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+BASE_URL = os.getenv("BASE_URL")
 
 # ---------------- APP ----------------
 app = Flask(__name__)
@@ -60,39 +55,33 @@ def topsis(df, weights, impacts):
 
     return df
 
-# ---------------- EMAIL ----------------
-def send_email(receiver, file_path):
-    print("STEP 1: send_email() called", flush=True)
+# ---------------- EMAIL (RESEND API) ----------------
+def send_email(receiver, download_url):
+    if not RESEND_API_KEY:
+        raise Exception("Resend API key missing")
 
-    if not EMAIL_ADDRESS or not EMAIL_APP_PASSWORD:
-        raise Exception("Email credentials missing")
+    response = requests.post(
+        "https://api.resend.com/emails",
+        headers={
+            "Authorization": f"Bearer {RESEND_API_KEY}",
+            "Content-Type": "application/json"
+        },
+        json={
+            "from": "Topsis <onboarding@resend.dev>",
+            "to": [receiver],
+            "subject": "TOPSIS Result",
+            "html": "<p>Your TOPSIS result is attached.</p>",
+            "attachments": [
+                {
+                    "filename": "output.csv",
+                    "path": download_url
+                }
+            ]
+        },
+        timeout=10
+    )
 
-    msg = EmailMessage()
-    msg["Subject"] = "TOPSIS Result"
-    msg["From"] = EMAIL_ADDRESS
-    msg["To"] = receiver
-    msg.set_content("Attached is your TOPSIS result file.")
-
-    with open(file_path, "rb") as f:
-        msg.add_attachment(
-            f.read(),
-            maintype="application",
-            subtype="octet-stream",
-            filename="output.csv"
-        )
-
-    print("STEP 2: Message prepared, connecting SMTP", flush=True)
-
-    server = smtplib.SMTP("smtp.gmail.com", 587)
-    try:
-        server.ehlo()
-        server.starttls()
-        server.ehlo()
-        server.login(EMAIL_ADDRESS, EMAIL_APP_PASSWORD)
-        server.send_message(msg)
-        print("STEP 3: Email sent successfully", flush=True)
-    finally:
-        server.quit()
+    response.raise_for_status()
 
 # ---------------- API ----------------
 @app.route("/api/topsis", methods=["POST"])
@@ -103,7 +92,6 @@ def run_topsis():
     email = request.form.get("email")
 
     send_mail = str(request.form.get("send_mail")).lower() in ["on", "true", "1"]
-    print("DEBUG send_mail:", send_mail, flush=True)
 
     if not file:
         return jsonify({"error": "CSV file required"}), 400
@@ -137,7 +125,8 @@ def run_topsis():
 
     if send_mail:
         try:
-            send_email(email, output_path)
+            download_url = f"{BASE_URL}/api/download/{output_filename}"
+            send_email(email, download_url)
             email_sent = True
         except Exception as e:
             print("EMAIL ERROR:", e, flush=True)
