@@ -55,6 +55,68 @@ def topsis(df, weights, impacts):
 
 # ---------- EMAIL ----------
 def send_email(receiver, file_path):
+    print("STEP 1: send_email() called")
+
+    if not EMAIL_ADDRESS or not EMAIL_APP_PASSWORD:
+        print("ERROR: Email credentials missing")
+        raise Exception("Email credentials missing")
+
+    print("STEP 2: Credentials loaded")
+    print("EMAIL_ADDRESS:", EMAIL_ADDRESS)
+
+    msg = EmailMessage()
+    msg["Subject"] = "TOPSIS Result"
+    msg["From"] = EMAIL_ADDRESS
+    msg["To"] = receiver
+    msg.set_content("Attached is your TOPSIS result file.")
+
+    print("STEP 3: EmailMessage created")
+
+    try:
+        with open(file_path, "rb") as f:
+            msg.add_attachment(
+                f.read(),
+                maintype="application",
+                subtype="octet-stream",
+                filename="output.csv"
+            )
+        print("STEP 4: Attachment added")
+    except Exception as e:
+        print("ERROR: Failed to attach file:", e)
+        raise
+
+    try:
+        print("STEP 5: Connecting to smtp.gmail.com:587")
+        server = smtplib.SMTP("smtp.gmail.com", 587, timeout=10)
+
+        print("STEP 6: Connected, sending EHLO")
+        server.ehlo()
+
+        print("STEP 7: Starting TLS")
+        server.starttls()
+
+        print("STEP 8: TLS started, sending EHLO again")
+        server.ehlo()
+
+        print("STEP 9: Attempting login")
+        server.login(EMAIL_ADDRESS, EMAIL_APP_PASSWORD)
+
+        print("STEP 10: Login successful, sending message")
+        server.send_message(msg)
+
+        print("STEP 11: Email sent successfully")
+
+    except Exception as e:
+        print("EMAIL ERROR OCCURRED:", type(e).__name__, "-", e)
+        raise
+
+    finally:
+        try:
+            server.quit()
+            print("STEP 12: SMTP connection closed")
+        except Exception:
+            print("STEP 12: SMTP connection already closed")
+
     msg = EmailMessage()
     msg["Subject"] = "TOPSIS Result"
     msg["From"] = EMAIL_ADDRESS
