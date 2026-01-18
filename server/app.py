@@ -5,11 +5,15 @@ import numpy as np
 import os, re, smtplib
 from email.message import EmailMessage
 from dotenv import load_dotenv
+from werkzeug.utils import secure_filename
+
 
 load_dotenv()
+EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
+EMAIL_APP_PASSWORD = os.getenv("EMAIL_APP_PASSWORD")
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 UPLOADS = "uploads"
 OUTPUTS = "outputs"
@@ -53,7 +57,7 @@ def topsis(df, weights, impacts):
 def send_email(receiver, file_path):
     msg = EmailMessage()
     msg["Subject"] = "TOPSIS Result"
-    msg["From"] = "EMAIL_ADDRESS"
+    msg["From"] = EMAIL_ADDRESS
     msg["To"] = receiver
     msg.set_content("Attached is your TOPSIS result file.")
 
@@ -66,7 +70,7 @@ def send_email(receiver, file_path):
         )
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-        server.login("EMAIL_ADDRESS", "EMAIL_APP_PASSWORD")
+        server.login(EMAIL_ADDRESS, EMAIL_APP_PASSWORD)
         server.send_message(msg)
 
 # ---------- API ----------
@@ -91,7 +95,7 @@ def run_topsis():
     if not all(i in ["+", "-"] for i in impacts):
         return jsonify({"error": "Impacts must be + or -"}), 400
 
-    file_path = os.path.join(UPLOADS, file.filename)
+    file_path = os.path.join(UPLOADS, secure_filename(file.filename))
     file.save(file_path)
 
     df = pd.read_csv(file_path)
@@ -101,7 +105,7 @@ def run_topsis():
 
     result_df = topsis(df, weights, impacts)
 
-    output_path = os.path.join(OUTPUTS, "output.csv")
+    output_path = os.path.join(OUTPUTS, f"output_{os.getpid()}.csv")
     result_df.to_csv(output_path, index=False)
 
     email_sent = False
@@ -126,4 +130,4 @@ def download():
     return send_file("outputs/output.csv", as_attachment=True)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000)
