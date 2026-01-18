@@ -1,0 +1,268 @@
+/* =========================
+   Base Layout
+========================= */
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: #0b1220; /* deep dark blue-gray */
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, sans-serif;
+  color: #e5e7eb;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1;
+}
+
+/* =========================
+   Container (mobile-safe)
+========================= */
+
+.container {
+  max-width: 900px;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+/* =========================
+   Headings
+========================= */
+
+h2 {
+  font-weight: 600;
+  color: #f9fafb;
+  font-size: 1.6rem;
+}
+
+h4 {
+  font-weight: 600;
+  margin-top: 24px;
+  color: #f3f4f6;
+}
+
+/* =========================
+   Card (Main Form)
+========================= */
+
+.card {
+  background-color: #111827;
+  border-radius: 12px;
+  border: 1px solid #1f2937;
+  padding: 20px;
+}
+
+/* =========================
+   Form Elements
+========================= */
+
+label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: #d1d5db;
+}
+
+input.form-control {
+  background-color: #020617;
+  border-radius: 8px;
+  border: 1px solid #1f2937;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  color: #e5e7eb;
+}
+
+input.form-control::placeholder {
+  color: #6b7280;
+}
+
+input.form-control:focus {
+  border-color: #2563eb;
+  box-shadow: none;
+  background-color: #020617;
+  color: #ffffff;
+}
+
+/* =========================
+   Buttons
+========================= */
+
+.btn {
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.btn-primary {
+  background-color: #2563eb;
+  border-color: #2563eb;
+}
+
+.btn-primary:hover {
+  background-color: #1e40af;
+  border-color: #1e40af;
+}
+
+.btn-success {
+  background-color: #16a34a;
+  border-color: #16a34a;
+}
+
+.btn-success:hover {
+  background-color: #15803d;
+  border-color: #15803d;
+}
+
+.btn-outline-secondary {
+  color: #e5e7eb;
+  border-color: #374151;
+}
+
+.btn-outline-secondary:hover {
+  background-color: #1f2937;
+}
+
+/* =========================
+   Alerts
+========================= */
+
+.alert {
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.alert-info {
+  background-color: #0f172a;
+  border-color: #1e3a8a;
+  color: #bfdbfe;
+}
+
+.alert-danger {
+  background-color: #1f2937;
+  border-color: #7f1d1d;
+  color: #fecaca;
+}
+
+/* =========================
+   Table
+========================= */
+
+.table {
+  margin-top: 16px;
+  background-color: #020617;
+  border-radius: 10px;
+  overflow: hidden;
+  color: #e5e7eb;
+}
+
+.table th {
+  background-color: #020617;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #c7d2fe;
+  border-bottom: 1px solid #1f2937;
+}
+
+.table td {
+  font-size: 0.85rem;
+  vertical-align: middle;
+  border-color: #1f2937;
+}
+
+/* =========================
+   Toasts (Top Center)
+========================= */
+
+.toast {
+  border-radius: 10px;
+  min-width: 260px;
+  background-color: #020617;
+  color: #e5e7eb;
+  border: 1px solid #1f2937;
+}
+
+.toast-header {
+  font-weight: 500;
+  background-color: transparent;
+  border-bottom: 1px solid #1f2937;
+}
+
+.toast-body {
+  font-size: 0.9rem;
+}
+
+/* =========================
+   Links
+========================= */
+
+a {
+  color: #60a5fa;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* =========================
+   Footer
+========================= */
+
+footer {
+  background-color: #020617;
+  border-top: 1px solid #1f2937;
+  padding: 14px 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+/* =========================
+   Mobile Optimizations
+========================= */
+
+@media (max-width: 576px) {
+  h2 {
+    font-size: 1.3rem;
+  }
+
+  .card {
+    padding: 16px;
+  }
+
+  .btn {
+    font-size: 0.9rem;
+  }
+
+  .table {
+    font-size: 0.8rem;
+  }
+}
+
+
+/* =========================
+   Criteria Counter
+========================= */
+
+.criteria-neutral {
+  color: #9ca3af; /* soft gray */
+  font-size: 0.85rem;
+}
+
+.criteria-valid {
+  color: #22c55e; /* green */
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.criteria-invalid {
+  color: #f87171; /* red */
+  font-size: 0.85rem;
+}
