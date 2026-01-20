@@ -26,6 +26,9 @@ os.makedirs(OUTPUTS, exist_ok=True)
 
 EMAIL_REGEX = r"^[\w\.-]+@[\w\.-]+\.\w+$"
 
+@app.route("/")
+def health():
+    return {"status": "backend running"}
 # ---------------- TOPSIS ----------------
 def topsis(df, weights, impacts):
     data = df.iloc[:, 1:].values.astype(float)
