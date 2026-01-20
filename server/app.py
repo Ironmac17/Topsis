@@ -4,21 +4,23 @@ import pandas as pd
 import numpy as np
 import os
 import re
-import requests
+import smtplib
+from email.message import EmailMessage
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 
 # ---------------- ENV ----------------
 load_dotenv()
-RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+GMAIL_USER = os.getenv("GMAIL_USER")
+GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
 BASE_URL = os.getenv("BASE_URL")
 
 # ---------------- APP ----------------
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-UPLOADS = "uploads"
-OUTPUTS = "outputs"
+UPLOADS = "/tmp/uploads"
+OUTPUTS = "/tmp/outputs"
 os.makedirs(UPLOADS, exist_ok=True)
 os.makedirs(OUTPUTS, exist_ok=True)
 
@@ -43,45 +45,36 @@ def topsis(df, weights, impacts):
             ideal_best.append(weighted[:, i].min())
             ideal_worst.append(weighted[:, i].max())
 
-    ideal_best = np.array(ideal_best)
-    ideal_worst = np.array(ideal_worst)
-
     d_best = np.sqrt(((weighted - ideal_best) ** 2).sum(axis=1))
     d_worst = np.sqrt(((weighted - ideal_worst) ** 2).sum(axis=1))
 
-    score = d_worst / (d_best + d_worst)
-    df["Topsis Score"] = score
+    df["Topsis Score"] = d_worst / (d_best + d_worst)
     df["Rank"] = df["Topsis Score"].rank(ascending=False).astype(int)
 
     return df
 
-# ---------------- EMAIL (RESEND API) ----------------
-def send_email(receiver, download_url):
-    if not RESEND_API_KEY:
-        raise Exception("Resend API key missing")
+# ---------------- EMAIL (GMAIL SMTP) ----------------
+def send_email(receiver, file_path):
+    if not GMAIL_USER or not GMAIL_APP_PASSWORD:
+        raise Exception("Gmail credentials missing")
 
-    response = requests.post(
-        "https://api.resend.com/emails",
-        headers={
-            "Authorization": f"Bearer {RESEND_API_KEY}",
-            "Content-Type": "application/json"
-        },
-        json={
-            "from": "Topsis <onboarding@resend.dev>",
-            "to": [receiver],
-            "subject": "TOPSIS Result",
-            "html": "<p>Your TOPSIS result is attached.</p>",
-            "attachments": [
-                {
-                    "filename": "output.csv",
-                    "path": download_url
-                }
-            ]
-        },
-        timeout=10
-    )
+    msg = EmailMessage()
+    msg["From"] = GMAIL_USER
+    msg["To"] = receiver
+    msg["Subject"] = "TOPSIS Result"
+    msg.set_content("Your TOPSIS result is attached.")
 
-    response.raise_for_status()
+    with open(file_path, "rb") as f:
+        msg.add_attachment(
+            f.read(),
+            maintype="text",
+            subtype="csv",
+            filename="topsis_result.csv"
+        )
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+        server.send_message(msg)
 
 # ---------------- API ----------------
 @app.route("/api/topsis", methods=["POST"])
@@ -125,11 +118,10 @@ def run_topsis():
 
     if send_mail:
         try:
-            download_url = f"{BASE_URL}/api/download/{output_filename}"
-            send_email(email, download_url)
+            send_email(email, output_path)
             email_sent = True
         except Exception as e:
-            print("EMAIL ERROR:", e, flush=True)
+            print("EMAIL ERROR:", e)
             email_error = "Email sending failed"
 
     return jsonify({
@@ -145,4 +137,4 @@ def download(filename):
 
 # ---------------- RUN ----------------
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run()
