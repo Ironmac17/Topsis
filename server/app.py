@@ -136,5 +136,4 @@ def download(filename):
     return send_file(os.path.join(OUTPUTS, filename), as_attachment=True)
 
 # ---------------- RUN ----------------
-if __name__ == "__main__":
-    app.run()
+app = Flask(__name__)
