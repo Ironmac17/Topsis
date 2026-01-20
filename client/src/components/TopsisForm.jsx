@@ -13,12 +13,13 @@ export default function TopsisForm() {
   const [result, setResult] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState("");
 
   const [emailSent, setEmailSent] = useState(false);
   const [emailFailed, setEmailFailed] = useState(false);
 
   /* ---------- Helpers ---------- */
-
+ 
   const countCriteria = (value) =>
     value ? value.split(",").filter(Boolean).length : 0;
 
@@ -93,6 +94,7 @@ export default function TopsisForm() {
     try {
       const res = await api.post("/topsis", formData);
       setResult(res.data.table);
+      setDownloadUrl(res.data.download);
 
       if (res.data.emailSent) setEmailSent(true);
       if (res.data.emailError) setEmailFailed(true);
@@ -276,7 +278,7 @@ export default function TopsisForm() {
           <h4>Result</h4>
           <ResultTable data={result} />
           <a
-            href="http://localhost:5000/api/download"
+            href={`https://topsis-3s7c.vercel.app${downloadUrl}`}
             className="btn btn-success mt-3"
           >
             Download output.csv
