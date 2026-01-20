@@ -138,5 +138,3 @@ def run_topsis():
 def download(filename):
     return send_file(os.path.join(OUTPUTS, filename), as_attachment=True)
 
-# ---------------- RUN ----------------
-app = Flask(__name__)
